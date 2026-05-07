@@ -1,0 +1,3 @@
+provider: generic
+url: https://r2.voiceappear.de
+updaterCacheDirName: voiceappear-updater
