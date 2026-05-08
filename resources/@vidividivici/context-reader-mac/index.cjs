@@ -13,7 +13,7 @@ function getBinaryPath() {
     try {
       fs.accessSync(packagedPath);
       return packagedPath;
-    } catch {
+    } catch (err) {
       // Fall through to module-relative path
     }
   }
@@ -49,7 +49,8 @@ function getWindowContext() {
           return;
         }
         resolve(data);
-      } catch {
+      } catch (err) {
+        console.error("Error parsing JSON from context-reader:", err, "Output:", stdout);
         resolve(null);
       }
     });
