@@ -2,22 +2,28 @@ const { execFile } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
+let cachedBinaryPath = null;
+
 /**
  * Returns the absolute path to the context-reader binary.
  * Packaged Electron: process.resourcesPath/bin/context-reader
  * Dev mode: __dirname/bin/context-reader (inside node_modules)
  */
 function getBinaryPath() {
+  if (cachedBinaryPath) return cachedBinaryPath;
+
   if (process.resourcesPath) {
     const packagedPath = path.join(process.resourcesPath, "bin", "context-reader");
     try {
       fs.accessSync(packagedPath);
-      return packagedPath;
+      cachedBinaryPath = packagedPath;
+      return cachedBinaryPath;
     } catch {
       // Fall through to module-relative path
     }
   }
-  return path.join(__dirname, "bin", "context-reader");
+  cachedBinaryPath = path.join(__dirname, "bin", "context-reader");
+  return cachedBinaryPath;
 }
 
 /**
