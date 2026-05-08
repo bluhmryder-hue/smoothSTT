@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "test": "node test-harness.js"
+    "test": "node --test lib/*.test.cjs && node test-harness.js"
   },
   "author": "Ryder Bluhm",
   "license": "MIT",
