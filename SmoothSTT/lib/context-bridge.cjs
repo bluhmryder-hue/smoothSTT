@@ -1,3 +1,8 @@
+/**
+ * SmoothSTT Context Bridge
+ * Created: 2025-05-22T12:00:00Z
+ * Last Modified: 2025-05-22T12:00:00Z
+ */
 const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
