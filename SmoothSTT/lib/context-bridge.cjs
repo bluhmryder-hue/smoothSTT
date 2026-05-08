@@ -14,7 +14,7 @@ function getExePath() {
     try {
       fs.accessSync(packagedPath);
       return packagedPath;
-    } catch {
+    } catch (err) {
       // Fall through
     }
   }
@@ -45,14 +45,19 @@ function getWindowContext() {
     };
 
     const timer = setTimeout(() => {
-      try { if (child) child.kill(); } catch {}
+      try {
+        if (child) child.kill();
+      } catch (err) {
+        console.error("Error killing child process on timeout:", err);
+      }
       settle(null);
     }, 6000);
 
     let child;
     try {
       child = spawn(getExePath(), [], { stdio: ["pipe", "pipe", "pipe"] });
-    } catch {
+    } catch (err) {
+      console.error("Error spawning ContextReader.exe:", err);
       settle(null);
       return;
     }
@@ -70,10 +75,19 @@ function getWindowContext() {
         } else {
           settle(data);
         }
-        try { child.kill(); } catch {}
-      } catch {
+        try {
+          child.kill();
+        } catch (err) {
+          console.error("Error killing child process after success/data error:", err);
+        }
+      } catch (err) {
+        console.error("Error parsing line from ContextReader.exe:", err, "Line:", line);
         settle(null);
-        try { child.kill(); } catch {}
+        try {
+          child.kill();
+        } catch (killErr) {
+          console.error("Error killing child process after parse error:", killErr);
+        }
       }
     });
 
