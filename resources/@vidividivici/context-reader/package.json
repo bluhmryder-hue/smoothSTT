@@ -1,0 +1,23 @@
+{
+  "name": "@vidividivici/context-reader",
+  "version": "1.0.7",
+  "description": "Windows accessibility context reader",
+  "main": "index.cjs",
+  "files": [
+    "index.cjs",
+    "bin/ContextReader.exe",
+    "scripts/build.cjs"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vidividivici/ContextReaderWindows.git"
+  },
+  "license": "UNLICENSED",
+  "private": false,
+  "devDependencies": {
+    "electron": "^41.2.0"
+  }
+}
