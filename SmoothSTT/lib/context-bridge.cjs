@@ -57,8 +57,16 @@ function getWindowContext() {
       return;
     }
 
-    child.on("error", () => settle(null));
-    child.on("exit", () => settle(null));
+    child.on("error", (err) => {
+      console.error("ContextReader spawn error:", err);
+      settle(null);
+    });
+    child.on("exit", (code) => {
+      if (code !== 0 && code !== null) {
+        console.error("ContextReader exited with code:", code);
+      }
+      settle(null);
+    });
 
     const rl = readline.createInterface({ input: child.stdout });
 
@@ -66,12 +74,14 @@ function getWindowContext() {
       try {
         const data = JSON.parse(line);
         if (data.error) {
+          console.error("ContextReader returned error:", data.error);
           settle(null);
         } else {
           settle(data);
         }
         try { child.kill(); } catch {}
-      } catch {
+      } catch (e) {
+        console.error("Failed to parse ContextReader line:", e, "Line:", line);
         settle(null);
         try { child.kill(); } catch {}
       }
