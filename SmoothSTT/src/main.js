@@ -2,7 +2,7 @@
  * SmoothSTT Main Entry Point
  * Created: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
  */
-const { app, BrowserWindow, tray, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain } = require('electron');
 const path = require('path');
 require('dotenv').config();
 
