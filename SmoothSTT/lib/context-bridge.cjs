@@ -23,6 +23,7 @@ function getExePath() {
 
 /**
  * Returns the directory containing ContextReader.exe.
+ * Useful for electron-builder extraResources config.
  */
 function getExeDir() {
   return path.join(__dirname, "..", "bin");
