@@ -57,8 +57,16 @@ function getWindowContext() {
       return;
     }
 
-    child.on("error", () => settle(null));
-    child.on("exit", () => settle(null));
+    child.on("error", (err) => {
+      console.error("ContextReader spawn error:", err);
+      settle(null);
+    });
+    child.on("exit", (code) => {
+      if (code !== 0 && code !== null) {
+        console.error("ContextReader exited with code:", code);
+      }
+      settle(null);
+    });
 
     const rl = readline.createInterface({ input: child.stdout });
 
