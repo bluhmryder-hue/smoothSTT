@@ -1,0 +1,127 @@
+# Auto-merge workflow for automated PRs (Dependabot, Google Jules, Gemini Code Assist)
+# This workflow automatically merges PRs from known automated sources once all tests pass
+
+name: Auto-merge Automated PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    # Only run for automated PRs from known sources
+    if: contains(['dependabot[bot]', 'github-actions[bot]', 't[bot]'], github.actor)
+    steps:
+      - name: Check PR status
+        run: |
+          echo "PR Author: ${{ github.actor }}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "PR Title: ${{ github.event.pull_request.title }}"
+          
+      # Wait for all status checks to pass
+      - name: Wait for status checks
+        uses: actions/github-script@v7
+        id: wait-for-checks
+        with:
+          script: |
+            const pull_number = ${{ github.event.pull_request.number }};
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Wait for up to 60 minutes for all checks to pass
+            const maxAttempts = 120;
+            const intervalSeconds = 30;
+            
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+              // Get combined status for the head reference
+              const { data: combinedStatus } = await github.rest.repos.getCombinedStatusForRef({
+                owner,
+                repo,
+                ref: '${{ github.event.pull_request.head.sha }}'
+              });
+              
+              if (combinedStatus.state === 'success') {
+                console.log('All status checks passed!');
+                return 'success';
+              }
+              
+              if (combinedStatus.state === 'failure') {
+                console.log('Some status checks failed!');
+                return 'failed';
+              }
+              
+              console.log(`Waiting for checks... (attempt ${attempt + 1}/${maxAttempts})`);
+              await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
+            }
+            
+            console.log('Timeout waiting for checks');
+            return 'timeout';
+
+      # Approve the PR if not already approved
+      - name: Approve PR
+        if: github.event.pull_request.draft == false
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pull_number = ${{ github.event.pull_request.number }};
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Check if already approved
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner,
+              repo,
+              pull_number
+            });
+            
+            const hasApproval = reviews.some(r => r.state === 'APPROVED');
+            
+            if (!hasApproval) {
+              console.log('Adding approval...');
+              await github.rest.pulls.createReview({
+                owner,
+                repo,
+                pull_number,
+                event: 'APPROVE',
+                body: 'Auto-approved by automated merge workflow'
+              });
+              console.log('PR approved!');
+            } else {
+              console.log('PR already approved');
+            }
+
+      # Enable auto-merge
+      - name: Enable auto-merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pull_number = ${{ github.event.pull_request.number }};
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Enable auto-merge
+            console.log('Enabling auto-merge...');
+            try {
+              await github.graphql(`
+                mutation enableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+                  enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: $mergeMethod }) {
+                    actor {
+                      login
+                    }
+                  }
+                }
+              `, {
+                pullRequestId: '${{ github.event.pull_request.node_id }}',
+                mergeMethod: 'MERGE'
+              });
+              console.log('Auto-merge enabled!');
+            } catch (error) {
+              // If auto-merge is already enabled, that's okay
+              if (error.message && error.message.includes('already enabled')) {
+                console.log('Auto-merge already enabled');
+              } else {
+                console.log('Enable auto-merge: ' + error.message);
+              }
+            }
