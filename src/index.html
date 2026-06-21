@@ -1,89 +1,288 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>SmoothSTT</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      background: #0b0f1a;
-      color: #e5e7eb;
-      font-family: Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 24px; }
-    .card {
-      background: #131926;
-      border: 1px solid #222d42;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 16px;
-    }
-    .row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    button, .button {
-      background: #8b5cf6;
-      color: #fff;
-      border: 0;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .secondary {
-      background: #1f2b3d;
-      color: #cbd5e1;
-    }
-    .muted { color: #9aa3b2; }
-    pre {
-      background: #0b101d;
-      border: 1px solid #232d40;
-      border-radius: 10px;
-      padding: 12px;
-      color: #d8dee8;
-      overflow: auto;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>SmoothSTT</title>
+<style>
+  :root {
+    color-scheme: dark;
+    background: #0b0f1a;
+    color: #e5e7eb;
+    font-family: 'Segoe UI', Roboto, Ubuntu, Cantarell, sans-serif;
+    --bg: #0b0f1a;
+    --surface: #131926;
+    --border: #222d42;
+    --accent: #8b5cf6;
+    --accent-2: #7c3aed;
+    --muted: #9aa3b2;
+    --danger: #f87171;
+    --success: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: #e5e7eb; }
+  .app { display: flex; height: 100vh; }
+  .sidebar {
+    width: 260px;
+    background: linear-gradient(180deg, #0f1525, #0b0f1a);
+    border-right: 1px solid var(--border);
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .brand {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    padding: 6px 10px 14px;
+    color: #f8fafc;
+  }
+  .brand span { color: var(--accent); }
+  .nav-item {
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .nav-item:hover { background: #151d2e; color: #e5e7eb; }
+  .nav-item.active { background: #1a2236; color: #fff; }
+  .main { flex: 1; padding: 22px 26px; overflow-y: auto; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  h2 { margin: 0 0 14px; font-size: 18px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 6px; }
+  label { color: var(--muted); font-size: 13px; font-weight: 600; }
+  input[type="text"], select {
+    background: #0b101d;
+    color: #e5e7eb;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    outline: none;
+    width: 100%;
+  }
+  input[type="text"]:focus, select:focus { border-color: var(--accent); }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 120px;
+  }
+  button.secondary { background: #1f2b3d; color: #cbd5e1; }
+  button.danger { background: #7f1d1d; color: #fecaca; }
+  .badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #1f2b3d;
+    border: 1px solid #2a3548;
+    color: #e5e7eb;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  .badge.recording { background: #7f1d1d; border-color: #991b1b; color: #fecaca; }
+  pre.log {
+    background: #0b101d;
+    border: 1px solid #232d40;
+    border-radius: 10px;
+    padding: 12px;
+    color: #d8dee8;
+    overflow: auto;
+    max-height: 220px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .kbd {
+    background: #1f2b3d;
+    border: 1px solid #2a3548;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-weight: 700;
+    font-size: 12px;
+    color: #e5e7eb;
+    min-width: 28px;
+    text-align: center;
+    display: inline-block;
+  }
+  .muted { color: var(--muted); }
+  .tooltip { color: var(--muted); font-size: 12px; }
+  .divider { height: 1px; background: #1f2b3d; margin: 10px 0; }
+</style>
 </head>
 <body>
-  <div class="card">
-    <div class="row">
-      <div>
-        <div style="font-size:18px;font-weight:700;">SmoothSTT</div>
-        <div class="muted">Local-first dictation. No cloud, no accounts.</div>
-      </div>
-      <div id="status" class="muted">Ready</div>
-    </div>
-  </div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">Smooth<span>STT</span></div>
+      <div class="nav-item active" data-panel="transcribe">Transcribe</div>
+      <div class="nav-item" data-panel="settings">Settings</div>
+      <div class="nav-item" data-panel="history">History</div>
+      <div class="nav-item" data-panel="about">About</div>
+      <div style="flex:1"></div>
+      <div class="muted" style="padding: 6px 10px; font-size: 12px;">v0.1.0</div>
+    </aside>
 
-  <div class="card">
-    <div class="row">
-      <div>
-        <div style="font-weight:600;">Trigger key</div>
-        <div class="muted" id="triggerLabel">Not set</div>
-      </div>
-      <button class="secondary" id="changeTrigger">Change</button>
-    </div>
-  </div>
+    <main class="main">
+      <!-- TRANSCRIBE -->
+      <section id="panel-transcribe" class="panel active">
+        <div class="card">
+          <div class="row">
+            <div>
+              <h2>Transcription</h2>
+              <div class="muted">Use your configured trigger key, or press Start to begin.</div>
+            </div>
+            <div class="row">
+              <span id="statusBadge" class="badge">Ready</span>
+              <button id="startBtn">Start</button>
+              <button id="stopBtn" class="danger" disabled>Stop</button>
+            </div>
+          </div>
+        </div>
 
-  <div class="card">
-    <div class="row">
-      <div>
-        <div style="font-weight:600;">Whisper endpoint</div>
-        <div class="muted" id="endpointLabel">http://127.0.0.1:6758</div>
-      </div>
-      <button class="secondary" id="saveEndpoint">Save</button>
-    </div>
-    <input id="endpointInput" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid #232d40;background:#0b101d;color:#e5e7eb;" />
-  </div>
+        <div class="card">
+          <div class="row">
+            <div style="flex:1">
+              <label>Live transcript</label>
+              <pre id="transcript" class="log">No transcript yet.</pre>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px; gap:8px;">
+            <button class="secondary" id="copyBtn">Copy</button>
+            <button class="secondary" id="pasteBtn">Paste into active window</button>
+            <button class="secondary" id="clearBtn">Clear</button>
+          </div>
+        </div>
 
-  <div class="card">
-    <div style="font-weight:600;margin-bottom:6px;">Latest transcript</div>
-    <pre id="transcript">No transcript yet.</pre>
+        <div class="card">
+          <div class="row">
+            <div style="flex:1">
+              <label>Event log</label>
+              <pre id="eventLog" class="log">Waiting for events...</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="panel-settings" class="panel">
+        <h2>Settings</h2>
+
+        <div class="card">
+          <div class="col" style="gap:10px;">
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Whisper.cpp endpoint</label>
+                <input id="endpointInput" type="text" placeholder="http://127.0.0.1:6758" />
+                <div class="tooltip">HTTP server that accepts WAV/audio and returns text.</div>
+              </div>
+              <button id="saveEndpoint" style="margin-top:18px;">Save endpoint</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Whisper CLI (optional fallback)</label>
+                <input id="cliInput" type="text" placeholder="whisper" />
+                <div class="tooltip">Used only if the HTTP endpoint is unreachable.</div>
+              </div>
+              <button id="saveCli" style="margin-top:18px;">Save CLI</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Model path (optional)</label>
+                <input id="modelInput" type="text" placeholder="C:/models/ggml-base.en.bin" />
+                <div class="tooltip">GGML model used by CLI fallback.</div>
+              </div>
+              <button id="saveModel" style="margin-top:18px;">Save model</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div style="flex:1" class="col">
+              <label>Trigger key</label>
+              <div class="row" style="gap:8px;">
+                <span id="triggerBadge" class="badge">Not set</span>
+                <button id="changeTrigger" class="secondary">Change</button>
+              </div>
+              <div class="tooltip">Press-and-hold to dictate. Caps Lock and system keys are disabled.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div style="flex:1" class="col">
+              <label>Audio input device</label>
+              <select id="audioDevice">
+                <option>Default</option>
+                <option>System Default</option>
+              </select>
+              <div class="tooltip">Recorder backend auto-detects ffmpeg/sox/arecord.</div>
+            </div>
+            <button id="refreshDevices" class="secondary" style="margin-top:18px;">Refresh devices</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div style="flex:1" class="col">
+              <label>Preferences</label>
+              <div class="row" style="gap:10px;">
+                <button id="toggleAutoPaste" class="secondary">Auto-paste: On</button>
+                <button id="toggleStartup" class="secondary">Start with Windows: Off</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section id="panel-history" class="panel">
+        <h2>History</h2>
+        <div class="card">
+          <pre id="historyLog" class="log">No history yet.</pre>
+          <div class="row" style="margin-top:10px; gap:8px;">
+            <button id="exportHistory" class="secondary">Export</button>
+            <button id="clearHistory" class="danger">Clear</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABOUT -->
+      <section id="panel-about" class="panel">
+        <h2>About SmoothSTT</h2>
+        <div class="card">
+          <div class="col" style="gap:8px;">
+            <div><strong>Version:</strong> <span class="badge">0.1.0</span></div>
+            <div><strong>Author:</strong> Ryder Bluhm</div>
+            <div><strong>License:</strong> MIT</div>
+            <div class="tooltip">Local-first dictation using Whisper.cpp. No cloud processing, no accounts.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="col" style="gap:8px;">
+            <div><strong>Context reader</strong></div>
+            <div class="tooltip">Optionally reads focused UI context before transcription to improve accuracy.</div>
+            <button id="testContext" class="secondary">Test context reader</button>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
   <script src="renderer.js"></script>
