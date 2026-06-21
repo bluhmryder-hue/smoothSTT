@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config();
 
 const STTEngine = require('./stt-engine');
-const Automation = require('./automation');
+const ClipPasteManager = require('./clippaste-manager');
 const settings = require('./settings');
 
 let mainWindow;
@@ -75,14 +75,13 @@ async function startTranscription() {
   toastWindow?.webContents.send('toast:status', 'Recording');
 
   try {
-    const context = ''; // Context reader integration point
     const transcript = await STTEngine.runPipeline();
-    const processed = Automation.processTranscription(transcript, context);
+    const processed = ClipPasteManager.processTranscription(transcript);
     currentConfig.lastTranscript = processed;
     settings.write(currentConfig);
     mainWindow?.webContents.send('transcript:result', processed);
     toastWindow?.webContents.send('toast:text', processed);
-    await Automation.pasteText(processed);
+    await ClipPasteManager.pasteText(processed);
   } catch (error) {
     mainWindow?.webContents.send('stt:error', error.message);
     toastWindow?.webContents.send('toast:error', error.message);

@@ -7,7 +7,7 @@ const CHECKS = [
   ['package.json', 'package.json'],
   ['src/main.js', 'src/main.js'],
   ['src/stt-engine.js', 'src/stt-engine.js'],
-  ['src/automation.js', 'src/automation.js'],
+  ['src/clippaste-manager.js', 'src/clippaste-manager.js'],
   ['src/settings.js', 'src/settings.js'],
   ['src/index.html', 'src/index.html'],
   ['src/toast.html', 'src/toast.html'],
