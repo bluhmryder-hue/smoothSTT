@@ -82,6 +82,7 @@ async function startTranscription() {
     settings.write(currentConfig);
     mainWindow?.webContents.send('transcript:result', processed);
     toastWindow?.webContents.send('toast:text', processed);
+    await Automation.pasteText(processed);
   } catch (error) {
     mainWindow?.webContents.send('stt:error', error.message);
     toastWindow?.webContents.send('toast:error', error.message);
