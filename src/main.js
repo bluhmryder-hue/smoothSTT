@@ -14,13 +14,13 @@ let currentConfig = settings.read();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 860,
-    height: 620,
-    minWidth: 640,
+    width: 520,
+    height: 640,
+    minWidth: 420,
     minHeight: 480,
     backgroundColor: '#0b1220',
     title: 'SmoothSTT',
-    icon: path.join(__dirname, '..', 'resources', 'favicon.ico'),
+    icon: path.join(__dirname, '..', 'fav.ico'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -38,8 +38,8 @@ function createWindow() {
 
 function createToast() {
   toastWindow = new BrowserWindow({
-    width: 320,
-    height: 64,
+    width: 280,
+    height: 56,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -54,9 +54,10 @@ function createToast() {
 }
 
 function buildTray() {
-  tray = new Tray(path.join(__dirname, '..', 'resources', 'favicon.ico'));
+  tray = new Tray(path.join(__dirname, '..', 'fav.ico'));
   const menu = Menu.buildFromTemplate([
-    { label: 'Open SmoothSTT', click: () => mainWindow.show() },
+    { label: 'Open', click: () => mainWindow.show() },
+    { label: 'Start dictation', click: () => startTranscription() },
     { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } },
   ]);
   tray.setToolTip('SmoothSTT');
@@ -75,7 +76,7 @@ async function startTranscription() {
 
   try {
     const context = ''; // Context reader integration point
-    const transcript = await STTEngine.startListening();
+    const transcript = await STTEngine.runPipeline();
     const processed = Automation.processTranscription(transcript, context);
     currentConfig.lastTranscript = processed;
     settings.write(currentConfig);
@@ -103,6 +104,11 @@ function setupIpc() {
     await startTranscription();
   });
 
+  ipcMain.handle('transcription:stop', () => {
+    if (!isRecording) return;
+    // Stop hook is implemented by engine state; UI polls status via events.
+  });
+
   ipcMain.handle('window:close', () => {
     mainWindow.hide();
   });
@@ -110,6 +116,18 @@ function setupIpc() {
   ipcMain.handle('window:show', () => {
     mainWindow.show();
   });
+
+  ipcMain.on('setup:complete', () => {
+    if (mainWindow) {
+      mainWindow.loadFile(path.join(__dirname, 'index.html'));
+    }
+  });
+}
+
+function openSetupIfNeeded() {
+  if (currentConfig.firstRunComplete) return;
+  if (!mainWindow) return;
+  mainWindow.loadFile(path.join(__dirname, 'setup.html'));
 }
 
 app.whenReady().then(() => {
@@ -117,6 +135,7 @@ app.whenReady().then(() => {
   createToast();
   buildTray();
   setupIpc();
+  openSetupIfNeeded();
 });
 
 app.on('window-all-closed', () => {

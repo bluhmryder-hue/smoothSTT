@@ -15,3 +15,6 @@ yarn-error.log*
 # OS specific
 .DS_Store
 Thumbs.db
+*.exe
+dist-installer/
+build-resources/

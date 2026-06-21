@@ -16,12 +16,9 @@ window.electron = {
   onStatus: (fn) => ipcRenderer.on('stt:status', (_, value) => fn(value)),
   onError: (fn) => ipcRenderer.on('stt:error', (_, value) => fn(value)),
   onTranscript: (fn) => ipcRenderer.on('transcript:result', (_, value) => fn(value)),
-  onToastStatus: (fn) => ipcRenderer.on('toast:status', (_, value) => fn(value)),
-  onToastText: (fn) => ipcRenderer.on('toast:text', (_, value) => fn(value)),
-  onToastError: (fn) => ipcRenderer.on('toast:error', (_, value) => fn(value)),
 };
 
-// Panel nav
+// Sidebar nav
 $$('.nav-item').forEach((item) => {
   item.addEventListener('click', () => {
     $$('.nav-item').forEach((n) => n.classList.remove('active'));
@@ -32,7 +29,7 @@ $$('.nav-item').forEach((item) => {
   });
 });
 
-// Start/Stop
+// Start / Stop
 const startBtn = $('#startBtn');
 const stopBtn = $('#stopBtn');
 const statusBadge = $('#statusBadge');
@@ -48,7 +45,7 @@ startBtn.addEventListener('click', async () => {
   startBtn.disabled = true;
   stopBtn.disabled = false;
   setText(statusBadge, 'Recording');
-  statusBadge.classList.add('recording');
+  statusBadge.className = 'badge recording';
   appendEvent('Starting transcription...');
   try {
     await window.electron.startTranscription();
@@ -68,19 +65,35 @@ stopBtn.addEventListener('click', async () => {
 window.electron.onStatus((s) => {
   setText(statusBadge, s);
   appendEvent('Status: ' + s);
+  badgeClassFor(s);
   if (!s || s === 'Ready') {
     startBtn.disabled = false;
     stopBtn.disabled = true;
-    statusBadge.classList.remove('recording');
   }
 });
+
+function badgeClassFor(status) {
+  const el = statusBadge;
+  if (!el) return;
+  const base = status || '';
+  const lower = base.toLowerCase();
+  if (lower.includes('error') || lower.includes('fail')) {
+    el.className = 'badge status err';
+  } else if (lower.includes('record')) {
+    el.className = 'badge recording';
+  } else if (lower.includes('starting')) {
+    el.className = 'badge status warn';
+  } else {
+    el.className = 'badge status ok';
+  }
+}
 
 window.electron.onError((e) => {
   appendEvent('Error: ' + e);
   setText(statusBadge, 'Error');
   startBtn.disabled = false;
   stopBtn.disabled = true;
-  statusBadge.classList.remove('recording');
+  badgeClassFor('Error');
 });
 
 window.electron.onTranscript((t) => {
@@ -88,7 +101,7 @@ window.electron.onTranscript((t) => {
   appendEvent('Transcript updated.');
 });
 
-// Clipboard
+// Clipbord helpers
 $('#copyBtn')?.addEventListener('click', async () => {
   const text = transcriptEl?.textContent || '';
   try {
@@ -96,15 +109,6 @@ $('#copyBtn')?.addEventListener('click', async () => {
     appendEvent('Copied to clipboard.');
   } catch (e) {
     appendEvent('Copy failed: ' + (e && e.message ? e.message : String(e)));
-  }
-});
-
-$('#pasteBtn')?.addEventListener('click', async () => {
-  try {
-    await window.electron.startTranscription();
-    appendEvent('Paste requested via transcription pipeline.');
-  } catch (e) {
-    appendEvent('Paste failed: ' + (e && e.message ? e.message : String(e)));
   }
 });
 
@@ -126,6 +130,10 @@ async function loadSettings() {
   if (model) model.value = cfg.whisperModelPath || '';
   if (triggerBadge) {
     setText(triggerBadge, cfg.triggerKeyCode != null ? String(cfg.triggerKeyCode) : 'Not set');
+  }
+  const autoPasteBtn = $('#toggleAutoPaste');
+  if (autoPasteBtn) {
+    setText(autoPasteBtn, 'Auto-paste: ' + (cfg.autoPaste ? 'On' : 'Off'));
   }
 }
 
@@ -158,40 +166,13 @@ $('#changeTrigger')?.addEventListener('click', async () => {
   }
 });
 
-$('#refreshDevices')?.addEventListener('click', () => {
-  appendEvent('Refreshing audio devices...');
-});
-
 $('#toggleAutoPaste')?.addEventListener('click', async () => {
   const cfg = await window.electron.getSettings();
   const next = !(cfg && cfg.autoPaste);
   await window.electron.saveSettings({ autoPaste: next });
-  setText($('#toggleAutoPaste'), 'Auto-paste: ' + (next ? 'On' : 'Off'));
+  const btn = $('#toggleAutoPaste');
+  if (btn) setText(btn, 'Auto-paste: ' + (next ? 'On' : 'Off'));
   appendEvent('Auto-paste: ' + (next ? 'On' : 'Off'));
-});
-
-$('#toggleStartup')?.addEventListener('click', async () => {
-  appendEvent('Startup toggle requires shell integration in a future update.');
-});
-
-$('#testContext')?.addEventListener('click', async () => {
-  appendEvent('Context reader test not wired in this build.');
-});
-
-$('#exportHistory')?.addEventListener('click', () => {
-  const blob = new Blob([(eventLogEl?.textContent || '')], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'smoothstt-history.txt';
-  a.click();
-  URL.revokeObjectURL(url);
-  appendEvent('History exported.');
-});
-
-$('#clearHistory')?.addEventListener('click', () => {
-  setText(eventLogEl, 'History cleared.');
-  appendEvent('History cleared.');
 });
 
 loadSettings().catch((e) => appendEvent('Settings load failed.'));

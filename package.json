@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "description": "High-performance, local-first Speech-to-Text and automation tool.",
   "main": "src/main.js",
+  "homepage": "./",
   "engines": {
     "node": ">=26.1.0"
   },
   "scripts": {
     "start": "electron .",
-    "test": "node test-harness.js"
+    "test": "node test-harness.js",
+    "build": "electron-builder --win -p never",
+    "build:portable": "electron-builder --win portable",
+    "build:nsis": "electron-builder --win nsis"
   },
   "author": "Ryder Bluhm",
   "license": "MIT",
@@ -18,6 +22,66 @@
     "node-record-lpcm16": "^1.0.1"
   },
   "devDependencies": {
-    "electron": "^42.0.0"
+    "electron": "^42.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.bluhmryder.smoothstt",
+    "productName": "SmoothSTT",
+    "copyright": "Copyright © 2026 Ryder Bluhm",
+    "directories": {
+      "output": "dist-installer",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "smoothstt-config.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/",
+        "to": "resources",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "SmoothSTT-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build-resources/icon.ico",
+      "uninstallerIcon": "build-resources/icon.ico",
+      "installerHeader": "build-resources/installer_header.bmp",
+      "installerSidebar": "build-resources/installer_sidebar.bmp"
+    },
+    "portable": {
+      "artifactName": "SmoothSTT-${version}-win-portable.${ext}"
+    },
+    "fileAssociations": [
+      {
+        "ext": "smoothstt",
+        "name": "SmoothSTT Config",
+        "role": "Editor"
+      }
+    ]
   }
 }

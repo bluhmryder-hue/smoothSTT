@@ -44,27 +44,8 @@
   <button id="save" disabled>Save and continue</button>
 
   <script>
-    const API = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=5&term=';
+    const { ipcRenderer } = require('electron');
     let selectedKey = null;
-
-    async function loadContext() {
-      // Fine-Print-Finder style sentence pull with 2 fallback sources
-      const sources = [
-        () => fetch(API + encodeURIComponent('fine print OR terms of service OR privacy policy'))
-          .then(r => r.json()).then(data => (data?.esearchresult?.idlist || []).join(', ')),
-        () => new Promise(resolve => setTimeout(() => resolve('No context loaded.'), 800)),
-      ];
-
-      for (const fn of sources) {
-        try {
-          const text = await fn();
-          window.parent.postMessage({ type: 'fineprint:context', text }, '*');
-          return;
-        } catch {
-          // loop
-        }
-      }
-    }
 
     document.addEventListener('keydown', (event) => {
       const code = event.code || event.key;
@@ -87,14 +68,19 @@
       document.getElementById('save').disabled = false;
     });
 
-    document.getElementById('save').addEventListener('click', () => {
+    document.getElementById('save').addEventListener('click', async () => {
       if (!selectedKey) return;
-      loadContext();
-      window.parent.postMessage({ type: 'setup:complete', key: selectedKey }, '*');
-      window.close();
+      await ipcRenderer.invoke('settings:set', { triggerKeyCode: selectedKey, firstRunComplete: true });
+      document.getElementById('status').textContent = 'Saved. Loading app...';
+      document.getElementById('status').className = 'ok';
+      setTimeout(() => {
+        ipcRenderer.send('setup:complete');
+      }, 400);
     });
 
-    window.parent.postMessage({ type: 'setup:ready' }, '*');
+    ipcRenderer.on('setup:load-url', (_event, url) => {
+      document.getElementById('status').textContent = 'Loaded: ' + (url || '');
+    });
   </script>
 </body>
 </html>

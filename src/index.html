@@ -22,7 +22,7 @@
   html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: #e5e7eb; }
   .app { display: flex; height: 100vh; }
   .sidebar {
-    width: 260px;
+    width: 220px;
     background: linear-gradient(180deg, #0f1525, #0b0f1a);
     border-right: 1px solid var(--border);
     padding: 18px 14px;
@@ -50,7 +50,7 @@
   }
   .nav-item:hover { background: #151d2e; color: #e5e7eb; }
   .nav-item.active { background: #1a2236; color: #fff; }
-  .main { flex: 1; padding: 22px 26px; overflow-y: auto; }
+  .main { flex: 1; padding: 22px 24px; overflow-y: auto; }
   .panel { display: none; }
   .panel.active { display: block; }
   h2 { margin: 0 0 14px; font-size: 18px; }
@@ -58,8 +58,8 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 18px;
-    margin-bottom: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
   }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .col { display: flex; flex-direction: column; gap: 6px; }
@@ -104,10 +104,14 @@
     padding: 12px;
     color: #d8dee8;
     overflow: auto;
-    max-height: 220px;
+    max-height: 260px;
     font-size: 13px;
     line-height: 1.5;
+    white-space: pre-wrap;
   }
+  .muted { color: var(--muted); }
+  .tooltip { color: var(--muted); font-size: 12px; }
+  .divider { height: 1px; background: #1f2b3d; margin: 10px 0; }
   .kbd {
     background: #1f2b3d;
     border: 1px solid #2a3548;
@@ -120,9 +124,12 @@
     text-align: center;
     display: inline-block;
   }
-  .muted { color: var(--muted); }
-  .tooltip { color: var(--muted); font-size: 12px; }
-  .divider { height: 1px; background: #1f2b3d; margin: 10px 0; }
+  .status {
+    font-weight: 700;
+  }
+  .status.ok { color: var(--success); }
+  .status.warn { color: #fbbf24; }
+  .status.err { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -131,7 +138,6 @@
       <div class="brand">Smooth<span>STT</span></div>
       <div class="nav-item active" data-panel="transcribe">Transcribe</div>
       <div class="nav-item" data-panel="settings">Settings</div>
-      <div class="nav-item" data-panel="history">History</div>
       <div class="nav-item" data-panel="about">About</div>
       <div style="flex:1"></div>
       <div class="muted" style="padding: 6px 10px; font-size: 12px;">v0.1.0</div>
@@ -147,7 +153,7 @@
               <div class="muted">Use your configured trigger key, or press Start to begin.</div>
             </div>
             <div class="row">
-              <span id="statusBadge" class="badge">Ready</span>
+              <span id="statusBadge" class="badge status ok">Ready</span>
               <button id="startBtn">Start</button>
               <button id="stopBtn" class="danger" disabled>Stop</button>
             </div>
@@ -156,21 +162,20 @@
 
         <div class="card">
           <div class="row">
-            <div style="flex:1">
+            <div style="flex:1" class="col">
               <label>Live transcript</label>
               <pre id="transcript" class="log">No transcript yet.</pre>
             </div>
           </div>
           <div class="row" style="margin-top:10px; gap:8px;">
             <button class="secondary" id="copyBtn">Copy</button>
-            <button class="secondary" id="pasteBtn">Paste into active window</button>
             <button class="secondary" id="clearBtn">Clear</button>
           </div>
         </div>
 
         <div class="card">
           <div class="row">
-            <div style="flex:1">
+            <div style="flex:1" class="col">
               <label>Event log</label>
               <pre id="eventLog" class="log">Waiting for events...</pre>
             </div>
@@ -206,7 +211,7 @@
                 <input id="modelInput" type="text" placeholder="C:/models/ggml-base.en.bin" />
                 <div class="tooltip">GGML model used by CLI fallback.</div>
               </div>
-              <button id="saveModel" style="margin-top:18px;">Save model</button>
+              <button id="saveModel" style="margin-top:18px;">Save model path</button>
             </div>
           </div>
         </div>
@@ -227,38 +232,11 @@
         <div class="card">
           <div class="row">
             <div style="flex:1" class="col">
-              <label>Audio input device</label>
-              <select id="audioDevice">
-                <option>Default</option>
-                <option>System Default</option>
-              </select>
-              <div class="tooltip">Recorder backend auto-detects ffmpeg/sox/arecord.</div>
-            </div>
-            <button id="refreshDevices" class="secondary" style="margin-top:18px;">Refresh devices</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="row">
-            <div style="flex:1" class="col">
               <label>Preferences</label>
               <div class="row" style="gap:10px;">
                 <button id="toggleAutoPaste" class="secondary">Auto-paste: On</button>
-                <button id="toggleStartup" class="secondary">Start with Windows: Off</button>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- HISTORY -->
-      <section id="panel-history" class="panel">
-        <h2>History</h2>
-        <div class="card">
-          <pre id="historyLog" class="log">No history yet.</pre>
-          <div class="row" style="margin-top:10px; gap:8px;">
-            <button id="exportHistory" class="secondary">Export</button>
-            <button id="clearHistory" class="danger">Clear</button>
           </div>
         </div>
       </section>
@@ -272,13 +250,6 @@
             <div><strong>Author:</strong> Ryder Bluhm</div>
             <div><strong>License:</strong> MIT</div>
             <div class="tooltip">Local-first dictation using Whisper.cpp. No cloud processing, no accounts.</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="col" style="gap:8px;">
-            <div><strong>Context reader</strong></div>
-            <div class="tooltip">Optionally reads focused UI context before transcription to improve accuracy.</div>
-            <button id="testContext" class="secondary">Test context reader</button>
           </div>
         </div>
       </section>
