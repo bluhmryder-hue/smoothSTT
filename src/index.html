@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SmoothSTT</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      background: #0b0f1a;
+      color: #e5e7eb;
+      font-family: Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    .card {
+      background: #131926;
+      border: 1px solid #222d42;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    button, .button {
+      background: #8b5cf6;
+      color: #fff;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .secondary {
+      background: #1f2b3d;
+      color: #cbd5e1;
+    }
+    .muted { color: #9aa3b2; }
+    pre {
+      background: #0b101d;
+      border: 1px solid #232d40;
+      border-radius: 10px;
+      padding: 12px;
+      color: #d8dee8;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <div>
+        <div style="font-size:18px;font-weight:700;">SmoothSTT</div>
+        <div class="muted">Local-first dictation. No cloud, no accounts.</div>
+      </div>
+      <div id="status" class="muted">Ready</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div style="font-weight:600;">Trigger key</div>
+        <div class="muted" id="triggerLabel">Not set</div>
+      </div>
+      <button class="secondary" id="changeTrigger">Change</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div style="font-weight:600;">Whisper endpoint</div>
+        <div class="muted" id="endpointLabel">http://127.0.0.1:6758</div>
+      </div>
+      <button class="secondary" id="saveEndpoint">Save</button>
+    </div>
+    <input id="endpointInput" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;border:1px solid #232d40;background:#0b101d;color:#e5e7eb;" />
+  </div>
+
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:6px;">Latest transcript</div>
+    <pre id="transcript">No transcript yet.</pre>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

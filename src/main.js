@@ -1,64 +1,128 @@
-/**
- * SmoothSTT Main Entry Point
- * Created: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
- */
 const { app, BrowserWindow, Tray, Menu, ipcMain } = require('electron');
 const path = require('path');
 require('dotenv').config();
 
+const STTEngine = require('./stt-engine');
+const Automation = require('./automation');
+const settings = require('./settings');
+
 let mainWindow;
 let toastWindow;
-let appTray;
+let tray;
+let isRecording = false;
+let currentConfig = settings.read();
 
-function createWindows() {
+function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-    show: true,
+    width: 860,
+    height: 620,
+    minWidth: 640,
+    minHeight: 480,
+    backgroundColor: '#0b1220',
+    title: 'SmoothSTT',
+    icon: path.join(__dirname, '..', 'resources', 'favicon.ico'),
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
-    }
+      contextIsolation: false,
+    },
   });
 
-  // Toast Window (Frameless, Transparent, Topmost)
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
+}
+
+function createToast() {
   toastWindow = new BrowserWindow({
-    width: 200,
-    height: 60,
+    width: 320,
+    height: 64,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
+    resizable: false,
     show: false,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
-    }
+      contextIsolation: false,
+    },
+  });
+  toastWindow.loadFile(path.join(__dirname, 'toast.html'));
+}
+
+function buildTray() {
+  tray = new Tray(path.join(__dirname, '..', 'resources', 'favicon.ico'));
+  const menu = Menu.buildFromTemplate([
+    { label: 'Open SmoothSTT', click: () => mainWindow.show() },
+    { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } },
+  ]);
+  tray.setToolTip('SmoothSTT');
+  tray.setContextMenu(menu);
+
+  tray.on('double-click', () => {
+    mainWindow.show();
+  });
+}
+
+async function startTranscription() {
+  if (isRecording) return;
+  isRecording = true;
+  mainWindow?.webContents.send('stt:status', 'Recording...');
+  toastWindow?.webContents.send('toast:status', 'Recording');
+
+  try {
+    const context = ''; // Context reader integration point
+    const transcript = await STTEngine.startListening();
+    const processed = Automation.processTranscription(transcript, context);
+    currentConfig.lastTranscript = processed;
+    settings.write(currentConfig);
+    mainWindow?.webContents.send('transcript:result', processed);
+    toastWindow?.webContents.send('toast:text', processed);
+  } catch (error) {
+    mainWindow?.webContents.send('stt:error', error.message);
+    toastWindow?.webContents.send('toast:error', error.message);
+  } finally {
+    isRecording = false;
+    mainWindow?.webContents.send('stt:status', 'Ready');
+    toastWindow?.webContents.send('toast:status', 'Ready');
+  }
+}
+
+function setupIpc() {
+  ipcMain.handle('settings:get', () => currentConfig);
+  ipcMain.handle('settings:set', (_, updates) => {
+    currentConfig = { ...currentConfig, ...updates };
+    settings.write(currentConfig);
+    return currentConfig;
   });
 
-  // Placeholder for window content
-  // mainWindow.loadFile('src/index.html');
-  // toastWindow.loadFile('src/toast.html');
+  ipcMain.handle('transcription:start', async () => {
+    await startTranscription();
+  });
+
+  ipcMain.handle('window:close', () => {
+    mainWindow.hide();
+  });
+
+  ipcMain.handle('window:show', () => {
+    mainWindow.show();
+  });
 }
 
 app.whenReady().then(() => {
-  createWindows();
-
-  // Tray Integration
-  appTray = new Tray(path.join(__dirname, '../resources/favicon.ico'));
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Show App', click: () => mainWindow.show() },
-    { label: 'Quit', click: () => app.quit() }
-  ]);
-  appTray.setToolTip('SmoothSTT');
-  appTray.setContextMenu(contextMenu);
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindows();
-  });
+  createWindow();
+  createToast();
+  buildTray();
+  setupIpc();
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    // Keep running in tray
-  }
+  if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  app.isQuitting = true;
 });

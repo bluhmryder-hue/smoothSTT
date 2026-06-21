@@ -1,0 +1,10 @@
+{
+  "triggerKeyCode": null,
+  "whisperEndpoint": "http://127.0.0.1:6758",
+  "whisperCli": "whisper",
+  "whisperModelPath": "",
+  "firstRunComplete": false,
+  "autoPaste": true,
+  "logLevel": "info",
+  "lastTranscript": ""
+}

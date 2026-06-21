@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Toast</title>
+<style>
+  :root { background:transparent; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; font-family: Segoe UI,Roboto,sans-serif; }
+  #toast {
+    margin: 8px;
+    padding: 10px 12px;
+    background: rgba(11,15,26,0.92);
+    color: #e5e7eb;
+    border: 1px solid #222d42;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.35;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+  #toast.show { opacity: 1; }
+  #toast.error { border-color: #7f1d1d; color: #fecaca; }
+</style>
+</head>
+<body>
+  <div id="toast">Ready</div>
+  <script>
+    const el = document.getElementById('toast');
+    function show(text, isError) {
+      el.textContent = text || '';
+      el.className = 'show' + (isError ? ' error' : '');
+      setTimeout(() => el.className = '', 2200);
+    }
+    window.electron?.onToastStatus?.((s) => show('Status: ' + s, false));
+    window.electron?.onToastText?.((t) => show(t, false));
+    window.electron?.onToastError?.((e) => show(e, true));
+  </script>
+</body>
+</html>

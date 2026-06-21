@@ -1,18 +1,28 @@
-/**
- * SmoothSTT Developer Test Harness
- * Created: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
- */
-const { getWindowContext } = require('./lib/context-bridge.cjs');
+const fs = require('fs');
+const path = require('path');
 
-async function testScraper() {
-  console.log("Testing ContextReader.exe...");
-  const context = await getWindowContext();
-  if (context) {
-    console.log("Scrape Success:", context);
-  } else {
-    console.log("Scrape Failed (Are you on Windows?)");
-  }
+const ROOT = path.resolve(__dirname, 'D:/LLM/Repos/smoothSTT');
+const EXPECTED = [
+  'src/main.js',
+  'src/stt-engine.js',
+  'src/automation.js',
+  'src/settings.js',
+  'src/index.html',
+  'smoothstt-config.json',
+  'package.json',
+];
+
+function fail(msg) {
+  console.error('[REBUILD FAIL]', msg);
+  process.exit(1);
 }
 
-// Run basic test
-testScraper();
+function check() {
+  for (const rel of EXPECTED) {
+    const p = path.join(ROOT, rel);
+    if (!fs.existsSync(p)) fail(`Missing required file: ${rel}`);
+  }
+  console.log('[REBUILD OK] All required files present.');
+}
+
+check();

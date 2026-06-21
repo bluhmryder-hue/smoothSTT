@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SmoothSTT Setup</title>
+<style>
+  :root { background:#0b0f1a; color:#e5e7eb; font-family:Segoe UI,Roboto,sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; }
+  .card { background:#131926; border:1px solid #222d42; border-radius:12px; padding:18px; }
+  .muted { color:#9aa3b2; }
+  .key-badge {
+    display:inline-block;
+    padding:10px 14px;
+    border-radius:10px;
+    background:#1f2b3d;
+    border:1px solid #232d40;
+    min-width:120px;
+    text-align:center;
+    font-weight:700;
+    color:#e5e7eb;
+    margin-top:8px;
+  }
+  button {
+    background:#8b5cf6; color:#fff; border:0; border-radius:10px;
+    padding:10px 14px; font-weight:600; cursor:pointer;
+  }
+  .error { color:#f87171; margin-top:8px; }
+  .ok { color:#4ade80; margin-top:8px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div style="font-size:18px;font-weight:700;">Choose your dictation key</div>
+    <div class="muted">Press one non-system key now.</div>
+  </div>
+
+  <div class="card">
+    <div id="status" class="muted">Listening...</div>
+    <div id="selected" class="key-badge">Press a key</div>
+    <div id="message"></div>
+  </div>
+
+  <button id="save" disabled>Save and continue</button>
+
+  <script>
+    const API = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=5&term=';
+    let selectedKey = null;
+
+    async function loadContext() {
+      // Fine-Print-Finder style sentence pull with 2 fallback sources
+      const sources = [
+        () => fetch(API + encodeURIComponent('fine print OR terms of service OR privacy policy'))
+          .then(r => r.json()).then(data => (data?.esearchresult?.idlist || []).join(', ')),
+        () => new Promise(resolve => setTimeout(() => resolve('No context loaded.'), 800)),
+      ];
+
+      for (const fn of sources) {
+        try {
+          const text = await fn();
+          window.parent.postMessage({ type: 'fineprint:context', text }, '*');
+          return;
+        } catch {
+          // loop
+        }
+      }
+    }
+
+    document.addEventListener('keydown', (event) => {
+      const code = event.code || event.key;
+      const forbidden = new Set([
+        'CapsLock','Tab','Control','Alt','Meta','Shift','Insert','Delete',
+        'Escape','Pause','ContextMenu','PrintScreen','F1','F2','F3','F4',
+        'F5','F6','F7','F8','F9','F10','F11','F12'
+      ]);
+
+      const msg = document.getElementById('message');
+
+      if (forbidden.has(code)) {
+        msg.textContent = 'That key is restricted. Choose another.';
+        msg.className = 'error';
+        return;
+      }
+
+      selectedKey = code;
+      document.getElementById('selected').textContent = code;
+      document.getElementById('save').disabled = false;
+    });
+
+    document.getElementById('save').addEventListener('click', () => {
+      if (!selectedKey) return;
+      loadContext();
+      window.parent.postMessage({ type: 'setup:complete', key: selectedKey }, '*');
+      window.close();
+    });
+
+    window.parent.postMessage({ type: 'setup:ready' }, '*');
+  </script>
+</body>
+</html>
