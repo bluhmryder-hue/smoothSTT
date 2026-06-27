@@ -12,6 +12,8 @@ const CHECKS = [
   ['src/index.html', 'src/index.html'],
   ['src/toast.html', 'src/toast.html'],
   ['src/renderer.js', 'src/renderer.js'],
+  ['resources/native/insert-bridge/Cargo.toml', 'resources/native/insert-bridge/Cargo.toml'],
+  ['resources/native/insert-bridge/insert-bridge.exe', 'resources/native/insert-bridge/insert-bridge.exe'],
   ['smoothstt-config.json', 'smoothstt-config.json'],
 ];
 
@@ -41,6 +43,8 @@ for (const [label, rel] of CHECKS) assertExists(label, rel);
 assertContains('settings.js', 'src/settings.js', 'smoothstt-config.json');
 assertContains('main.js', 'src/main.js', 'ipcMain');
 assertContains('stt-engine.js', 'src/stt-engine.js', 'streamToWhisper');
+assertContains('clippaste-manager.js', 'src/clippaste-manager.js', '_getInsertBridgePath');
+assertContains('clippaste-manager.js', 'src/clippaste-manager.js', 'insert-bridge');
 assertContains('index.html', 'src/index.html', 'SmoothSTT');
 assertContains('index.html', 'src/index.html', 'renderer.js');
 assertContains('toast.html', 'src/toast.html', 'toast');

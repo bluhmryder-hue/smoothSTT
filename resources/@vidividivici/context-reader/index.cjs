@@ -4,22 +4,41 @@ const fs = require("fs");
 const readline = require("readline");
 
 /**
- * Returns the absolute path to ContextReader.exe.
- * Packaged Electron: process.resourcesPath/bin/ContextReader.exe
- * Dev mode: __dirname/bin/ContextReader.exe (inside node_modules)
+ * Returns the absolute path to ContextReader.exe or context-reader.exe.
+ * Priority order:
+ * 1. Clean-room context-reader Rust binary (new implementation)
+ * 2. Legacy ContextReader.exe binary (fallback)
  */
 function getExePath() {
-  if (process.resourcesPath) {
-    const packagedPath = path.join(process.resourcesPath, "bin", "ContextReader.exe");
+  // 1. Check new clean-room Rust implementation first
+  const cleanPaths = [
+    path.join(__dirname, "..", "..", "native", "context-reader", "target", "release", "context-reader.exe"),
+    path.join(process.resourcesPath, "native", "context-reader.exe"),
+    path.join(__dirname, "..", "..", "native", "context-reader", "bin", "context-reader.exe"),
+  ];
+
+  for (const p of cleanPaths) {
     try {
-      fs.accessSync(packagedPath);
-      return packagedPath;
-    } catch (err) {
-      // Fall through to module-relative path
-      // console.debug("Packaged path not found, falling back to module-relative path", err);
-    }
+      fs.accessSync(p);
+      return p;
+    } catch {}
   }
-  return path.join(__dirname, "bin", "ContextReader.exe");
+
+  // 2. Fallback to legacy ContextReader.exe
+  const legacyPackaged = path.join(process.resourcesPath, "bin", "ContextReader.exe");
+  try {
+    fs.accessSync(legacyPackaged);
+    return legacyPackaged;
+  } catch {}
+
+  const legacyModule = path.join(__dirname, "bin", "ContextReader.exe");
+  try {
+    fs.accessSync(legacyModule);
+    return legacyModule;
+  } catch {}
+
+  // 3. Final fallback: same directory with normalized name
+  return path.join(__dirname, "bin", "context-reader.exe");
 }
 
 /**

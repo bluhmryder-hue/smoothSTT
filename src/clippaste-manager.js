@@ -12,10 +12,11 @@ class AutomationManager {
 
   processTranscription(text, context) {
     console.log(`Processing Transcription: ${text}`);
+    console.log(`Context: ${context ? JSON.stringify(context) : 'null'}`);
     return text;
   }
 
-  _getClipPastePath() {
+  _getClipPasteLegacyPath() {
     const isWin = process.platform === 'win32';
     if (!isWin) return null;
 
@@ -37,17 +38,53 @@ class AutomationManager {
     return null;
   }
 
+  _getInsertBridgePath() {
+    const isWin = process.platform === 'win32';
+    if (!isWin) return null;
+
+    const candidates = [
+      path.join(process.resourcesPath, 'resources', 'native', 'insert-bridge', 'insert-bridge.exe'),
+      path.join(process.resourcesPath, 'native', 'insert-bridge', 'insert-bridge.exe'),
+      path.join(__dirname, '..', '..', 'resources', 'native', 'insert-bridge', 'insert-bridge.exe'),
+      path.join(__dirname, '..', 'resources', 'native', 'insert-bridge', 'insert-bridge.exe'),
+    ];
+
+    for (const p of candidates) {
+      if (fs.existsSync(p) || fs.accessSync(p, fs.constants.X_OK)) {
+        return p;
+      }
+    }
+
+    return null;
+  }
+
   _ensurePasteProcess() {
     if (this.pasteProc) return;
 
-    const binaryPath = this._getClipPastePath();
-    if (!binaryPath) {
-      console.warn('[GoodPaste] ClipPaste.exe not found, skipping text insertion');
+    const legacyBinaryPath = this._getClipPasteLegacyPath();
+    if (legacyBinaryPath) {
+      return this._startProcess(legacyBinaryPath);
+    }
+
+    const insertBridgePath = this._getInsertBridgePath();
+    if (insertBridgePath) {
+      return this._startProcess(insertBridgePath);
+    }
+
+    console.warn('[GoodPaste] ClipPaste.exe and insert-bridge.exe not found; fallback clipboard will be used during paste');
+    return;
+  }
+
+  _startProcess(binaryPath) {
+    try {
+      this.pasteProc = spawn(binaryPath, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    } catch (err) {
+      console.error('[GoodPaste] failed to start:', err.message);
+      this.pasteProc = null;
       return;
     }
 
     try {
-      this.pasteProc = spawn(binaryPath, [], { stdio: ['pipe', 'pipe', 'pipe'] });
       this.pasteProc.stdout.on('data', (data) => {
         const text = data.toString();
         for (const line of text.split('\n')) {
@@ -67,25 +104,36 @@ class AutomationManager {
           }
         }
       });
-
-      this.pasteProc.stderr.on('data', (data) => {
-        console.error('[GoodPaste] stderr:', data.toString().trim());
-      });
-
-      this.pasteProc.on('exit', (code) => {
-        console.log('[GoodPaste] exited:', code);
-        this.pasteProc = null;
-        this.pasteResolveByRequestId.forEach((resolve) => resolve({ ok: false, error: 'process-exit' }));
-        this.pasteResolveByRequestId.clear();
-      });
-
-      this.pasteProc.on('error', (err) => {
-        console.error('[GoodPaste] spawn error:', err.message);
-        this.pasteProc = null;
-      });
     } catch (err) {
-      console.error('[GoodPaste] failed to start:', err.message);
+      console.error('[GoodPaste] stdout attach failed:', err.message);
+    }
+
+    this.pasteProc.stderr.on('data', (data) => {
+      console.error('[GoodPaste] stderr:', data.toString().trim());
+    });
+
+    this.pasteProc.on('exit', (code) => {
+      console.log('[GoodPaste] exited:', code);
       this.pasteProc = null;
+      this.pasteResolveByRequestId.forEach((resolve) => resolve({ ok: false, error: 'process-exit' }));
+      this.pasteResolveByRequestId.clear();
+    });
+
+    this.pasteProc.on('error', (err) => {
+      console.error('[GoodPaste] spawn error:', err.message);
+      this.pasteProc = null;
+    });
+  }
+
+  async _pasteViaClipboard(text) {
+    try {
+      const { clipboard } = require('electron');
+      clipboard.writeText(text);
+      console.log('[GoodPaste] wrote text to clipboard as fallback');
+      return { ok: true, event: { fallback: true } };
+    } catch (err) {
+      console.error('[GoodPaste] fallback clipboard write failed:', err.message);
+      return { ok: false, error: err.message };
     }
   }
 
@@ -99,27 +147,29 @@ class AutomationManager {
     }
 
     this._ensurePasteProcess();
-    if (!this.pasteProc) return;
+    if (this.pasteProc) {
+      const requestId = ++this.pasteRequestId;
+      const command = JSON.stringify({
+        action: 'paste',
+        requestId,
+        text,
+        delayMs: 0,
+        restoreMs: 1000,
+        editTimeoutMs: 30000,
+      });
 
-    const requestId = ++this.pasteRequestId;
-    const command = JSON.stringify({
-      action: 'paste',
-      requestId,
-      text,
-      delayMs: 0,
-      restoreMs: 1000,
-      editTimeoutMs: 30000,
-    });
+      return new Promise((resolve) => {
+        this.pasteResolveByRequestId.set(requestId, resolve);
+        try {
+          this.pasteProc.stdin.write(command + '\n');
+        } catch (err) {
+          this.pasteResolveByRequestId.delete(requestId);
+          resolve({ ok: false, error: err.message });
+        }
+      });
+    }
 
-    return new Promise((resolve) => {
-      this.pasteResolveByRequestId.set(requestId, resolve);
-      try {
-        this.pasteProc.stdin.write(command + '\n');
-      } catch (err) {
-        this.pasteResolveByRequestId.delete(requestId);
-        resolve({ ok: false, error: err.message });
-      }
-    });
+    return this._pasteViaClipboard(text);
   }
 }
 

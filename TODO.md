@@ -5,8 +5,8 @@ Generated: 2026-06-21 16:39:48 CDT
 ## High Priority
 - [x] Verify repo state is synced and tests pass
 - [x] Rename automation.js to clippaste-manager.js for clearer intent
-- [ ] Replace unlicensed ContextReader.exe with clean reimplementation
-- [ ] Replace unlicensed ClipPaste.exe with clean reimplementation
+- [x] Replace unlicensed ContextReader.exe with clean reimplementation
+- [ ] Replace unlicensed ClipPaste.exe with clean reimplementation (`insert-bridge` in progress)
 - [ ] Contact upstream authors regarding license status
 - [ ] Finalize app license and monetization terms
 

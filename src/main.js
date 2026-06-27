@@ -5,12 +5,15 @@ require('dotenv').config();
 const STTEngine = require('./stt-engine');
 const ClipPasteManager = require('./clippaste-manager');
 const settings = require('./settings');
+const { getFocusedWindowContext } = require('./context');
+
+const EXE_DIR = path.dirname(process.execPath);
 
 let mainWindow;
 let toastWindow;
 let tray;
 let isRecording = false;
-let currentConfig = settings.read();
+let currentConfig = settings.read(EXE_DIR);
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -57,7 +60,7 @@ function buildTray() {
   tray = new Tray(path.join(__dirname, '..', 'fav.ico'));
   const menu = Menu.buildFromTemplate([
     { label: 'Open', click: () => mainWindow.show() },
-    { label: 'Start dictation', click: () => startTranscription() },
+    { label: 'Set transcript hotkey', click: () => openTriggerPickerFromTray() },
     { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } },
   ]);
   tray.setToolTip('SmoothSTT');
@@ -68,6 +71,33 @@ function buildTray() {
   });
 }
 
+async function openTriggerPickerFromTray() {
+  try {
+    const openTriggerPicker = (() => {
+      try {
+        const mod = require('./renderer-trigger');
+        if (mod && typeof mod.openTriggerPicker === 'function') return mod.openTriggerPicker;
+      } catch (e) {
+        // expected if trigger picker is missing
+      }
+      return null;
+    })();
+
+    if (!openTriggerPicker) {
+      return;
+    }
+
+    const code = await openTriggerPicker();
+    if (code != null) {
+      currentConfig.triggerKeyCode = code;
+      settings.write(EXE_DIR, currentConfig);
+      mainWindow?.webContents.send('trigger:updated', code);
+    }
+  } catch (e) {
+    console.error('Tray trigger picker failed:', e);
+  }
+}
+
 async function startTranscription() {
   if (isRecording) return;
   isRecording = true;
@@ -75,10 +105,18 @@ async function startTranscription() {
   toastWindow?.webContents.send('toast:status', 'Recording');
 
   try {
+    let context = null;
+    try {
+      context = await getFocusedWindowContext();
+    } catch (error) {
+      console.error('Failed to capture window context:', error);
+      context = null;
+    }
+
     const transcript = await STTEngine.runPipeline();
-    const processed = ClipPasteManager.processTranscription(transcript);
+    const processed = ClipPasteManager.processTranscription(transcript, context);
     currentConfig.lastTranscript = processed;
-    settings.write(currentConfig);
+    settings.write(EXE_DIR, currentConfig);
     mainWindow?.webContents.send('transcript:result', processed);
     toastWindow?.webContents.send('toast:text', processed);
     await ClipPasteManager.pasteText(processed);
@@ -96,7 +134,7 @@ function setupIpc() {
   ipcMain.handle('settings:get', () => currentConfig);
   ipcMain.handle('settings:set', (_, updates) => {
     currentConfig = { ...currentConfig, ...updates };
-    settings.write(currentConfig);
+    settings.write(EXE_DIR, currentConfig);
     return currentConfig;
   });
 

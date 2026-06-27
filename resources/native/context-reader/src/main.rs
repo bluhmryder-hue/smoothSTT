@@ -6,6 +6,8 @@ use windows::{
     Win32::System::ProcessStatus::*,
     Win32::System::Threading::*,
     Win32::UI::WindowsAndMessaging::*,
+    Win32::Graphics::Gdi::*,
+    Win32::UI::Controls::*,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -75,8 +77,8 @@ fn get_window_context() -> Option<WindowContext> {
         let _ = GetWindowThreadProcessId(hwnd, Some(&mut pid));
         let process_name = get_process_name(pid);
 
-        let caret_position = 0usize;
-        let context_text = None;
+        let caret_position = get_caret_position(hwnd);
+        let context_text = get_context_text(hwnd);
 
         Some(WindowContext {
             title,
@@ -104,5 +106,101 @@ fn get_process_name(pid: u32) -> String {
 
         let _ = CloseHandle(process);
         name
+    }
+}
+
+fn get_caret_position(hwnd: HWND) -> usize {
+    unsafe {
+        let mut info = GUITHREADINFO {
+            cbSize: std::mem::size_of::<GUITHREADINFO>() as u32,
+            flags: GUITHREADINFO_FLAGS(0),
+            hwndActive: HWND(std::ptr::null_mut()),
+            hwndFocus: HWND(std::ptr::null_mut()),
+            hwndCapture: HWND(std::ptr::null_mut()),
+            hwndMenuOwner: HWND(std::ptr::null_mut()),
+            hwndCaret: HWND(std::ptr::null_mut()),
+            hwndMoveSize: HWND(std::ptr::null_mut()),
+            rcCaret: RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            },
+        };
+
+        let thread_id = GetWindowThreadProcessId(hwnd, Some(std::ptr::null_mut()));
+        if GetGUIThreadInfo(thread_id, &mut info).is_err() {
+            return 0;
+        }
+
+        if info.hwndCaret.0.is_null() {
+            return 0;
+        }
+
+        let mut client_pt = POINT {
+            x: info.rcCaret.left,
+            y: info.rcCaret.top,
+        };
+        if ScreenToClient(info.hwndFocus, &mut client_pt) != TRUE {
+            return 0;
+        }
+
+        let lparam = ((client_pt.y << 16) as usize) | (client_pt.x as usize & 0xFFFF);
+        let result = SendMessageW(
+            info.hwndFocus,
+            EM_POSFROMCHAR,
+            WPARAM(lparam),
+            LPARAM(0),
+        );
+
+        TryInto::<usize>::try_into(result.0).unwrap_or(0)
+    }
+}
+
+fn get_context_text(hwnd: HWND) -> Option<String> {
+    unsafe {
+        let mut info = GUITHREADINFO {
+            cbSize: std::mem::size_of::<GUITHREADINFO>() as u32,
+            flags: GUITHREADINFO_FLAGS(0),
+            hwndActive: HWND(std::ptr::null_mut()),
+            hwndFocus: HWND(std::ptr::null_mut()),
+            hwndCapture: HWND(std::ptr::null_mut()),
+            hwndMenuOwner: HWND(std::ptr::null_mut()),
+            hwndCaret: HWND(std::ptr::null_mut()),
+            hwndMoveSize: HWND(std::ptr::null_mut()),
+            rcCaret: RECT {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            },
+        };
+
+        let thread_id = GetWindowThreadProcessId(hwnd, Some(std::ptr::null_mut()));
+        if GetGUIThreadInfo(thread_id, &mut info).is_err() {
+            return None;
+        }
+
+        let control = info.hwndFocus;
+        if control.0.is_null() {
+            return None;
+        }
+
+        let len = SendMessageW(control, WM_GETTEXTLENGTH, WPARAM(0), LPARAM(0));
+        let len: usize = len.0.try_into().unwrap_or(0);
+        if len == 0 {
+            return Some(String::new());
+        }
+
+        let mut buf: Vec<u16> = vec![0; len + 1];
+        let copied = SendMessageW(
+            control,
+            WM_GETTEXT,
+            WPARAM(buf.len()),
+            LPARAM(buf.as_mut_ptr() as isize),
+        );
+        let copied: usize = copied.0.try_into().unwrap_or(0);
+        buf.truncate(copied);
+        Some(String::from_utf16_lossy(&buf))
     }
 }

@@ -18,4 +18,7 @@ Thumbs.db
 *.exe
 dist-installer/
 build-resources/
-resources/native/
+# Keep source code, ignore build outputs and binaries
+resources/native/context-reader/bin/
+resources/native/context-reader/target/
+resources/native/context-reader/**/target/

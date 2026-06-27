@@ -74,6 +74,11 @@
     width: 100%;
   }
   input[type="text"]:focus, select:focus { border-color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .badge.muted { color: var(--muted); border-color: var(--border); }
+  .badge.warn { background: #422006; border-color: #854d0e; color: #fbbf24; }
+  .transcript { white-space: pre-wrap; word-break: break-word; }
   button {
     background: var(--accent);
     color: #fff;
@@ -191,6 +196,19 @@
           <div class="col" style="gap:10px;">
             <div class="row">
               <div style="flex:1" class="col">
+                <label>Trigger key</label>
+                <div class="row" style="gap:8px;">
+                  <span id="triggerBadge" class="badge">Not set</span>
+                  <button id="changeTrigger" class="secondary">Change</button>
+                </div>
+                <div class="tooltip">Press-and-hold to dictate. Caps Lock and system keys are disabled.</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="row">
+              <div style="flex:1" class="col">
                 <label>Whisper.cpp endpoint</label>
                 <input id="endpointInput" type="text" placeholder="http://127.0.0.1:6758" />
                 <div class="tooltip">HTTP server that accepts WAV/audio and returns text.</div>
@@ -213,30 +231,147 @@
               </div>
               <button id="saveModel" style="margin-top:18px;">Save model path</button>
             </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="row">
-            <div style="flex:1" class="col">
-              <label>Trigger key</label>
-              <div class="row" style="gap:8px;">
-                <span id="triggerBadge" class="badge">Not set</span>
-                <button id="changeTrigger" class="secondary">Change</button>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Model file name (optional)</label>
+                <input id="modelFileNameInput" type="text" placeholder="ggml-base.en.bin" />
+                <div class="tooltip">Filename for the GGML model.</div>
               </div>
-              <div class="tooltip">Press-and-hold to dictate. Caps Lock and system keys are disabled.</div>
+              <button id="saveModelFileName" style="margin-top:18px;">Save filename</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Whisper server path (optional)</label>
+                <input id="whisperServerInput" type="text" placeholder="C:/tools/whisper-server/whisper-server.exe" />
+                <div class="tooltip">Path to an external Whisper.cpp server binary if needed.</div>
+              </div>
+              <button id="saveWhisperServer" style="margin-top:18px;">Save server path</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Audio input device</label>
+                <input id="audioDeviceInput" type="text" placeholder="Default" />
+                <div class="tooltip">Leave blank to use the system default device.</div>
+              </div>
+              <button id="saveAudioDevice" style="margin-top:18px;">Save device</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Sample rate</label>
+                <input id="sampleRateInput" type="text" placeholder="16000" />
+                <div class="tooltip">Typical: 16000 for Whisper.</div>
+              </div>
+              <button id="saveSampleRate" style="margin-top:18px;">Save</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Channels</label>
+                <input id="channelsInput" type="text" placeholder="1" />
+                <div class="tooltip">1 = mono, 2 = stereo.</div>
+              </div>
+              <button id="saveChannels" style="margin-top:18px;">Save</button>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="row">
-            <div style="flex:1" class="col">
-              <label>Preferences</label>
-              <div class="row" style="gap:10px;">
-                <button id="toggleAutoPaste" class="secondary">Auto-paste: On</button>
+          <div class="col" style="gap:10px;">
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Preferences</label>
+                <div class="row" style="gap:10px; flex-wrap: wrap;">
+                  <button id="toggleAutoPaste" class="secondary">Auto-paste: On</button>
+                  <button id="toggleNotifications" class="secondary">Notifications: On</button>
+                  <button id="toggleStartup" class="secondary">Run on startup: Off</button>
+                  <button id="toggleTray" class="secondary">Minimize to tray: On</button>
+                </div>
               </div>
             </div>
+
+            <div class="divider"></div>
+
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Language</label>
+                <select id="languageSelect">
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                  <option value="fr">French</option>
+                  <option value="de">German</option>
+                  <option value="auto">Auto</option>
+                </select>
+                <div class="tooltip">UI language and fallback transcription locale.</div>
+              </div>
+              <button id="saveLanguage" style="margin-top:18px;">Save</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Theme</label>
+                <select id="themeSelect">
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                  <option value="contrast">High contrast</option>
+                </select>
+              </div>
+              <button id="saveTheme" style="margin-top:18px;">Save</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Theme variant</label>
+                <select id="themeVariantSelect">
+                  <option value="followSystem">Follow system</option>
+                  <option value="alwaysDark">Always dark</option>
+                  <option value="alwaysLight">Always light</option>
+                </select>
+              </div>
+              <button id="saveThemeVariant" style="margin-top:18px;">Save</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Accent color</label>
+                <input id="accentColorInput" type="text" placeholder="#8b5cf6" />
+              </div>
+              <button id="saveAccentColor" style="margin-top:18px;">Save</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Custom system prompt</label>
+                <input id="customPromptInput" type="text" placeholder="Optional prompt text..." />
+                <div class="tooltip">Prepended to transcription context if supported.</div>
+              </div>
+              <button id="saveCustomPrompt" style="margin-top:18px;">Save</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Log level</label>
+                <select id="logLevelSelect">
+                  <option value="debug">Debug</option>
+                  <option value="info">Info</option>
+                  <option value="warn">Warn</option>
+                  <option value="error">Error</option>
+                </select>
+              </div>
+              <button id="saveLogLevel" style="margin-top:18px;">Save</button>
+            </div>
+            <div class="row">
+              <div style="flex:1" class="col">
+                <label>Max log lines</label>
+                <input id="maxLogLinesInput" type="text" placeholder="200" />
+                <div class="tooltip">Controls event log retention.</div>
+              </div>
+              <button id="saveMaxLogLines" style="margin-top:18px;">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="gap:10px;">
+            <button id="resetDefaults" class="danger">Reset to defaults</button>
+            <button id="exportConfig" class="secondary">Export config</button>
+            <button id="importConfig" class="secondary">Import config</button>
           </div>
         </div>
       </section>
@@ -249,7 +384,24 @@
             <div><strong>Version:</strong> <span class="badge">0.1.0</span></div>
             <div><strong>Author:</strong> Ryder Bluhm</div>
             <div><strong>License:</strong> MIT</div>
-            <div class="tooltip">Local-first dictation using Whisper.cpp. No cloud processing, no accounts.</div>
+            <div class="muted">Local-first dictation using Whisper.cpp. No cloud processing, no accounts.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="col" style="gap:8px;">
+            <div><strong>Third-party components</strong></div>
+            <div class="muted">See docs/LICENSES.md for full details.</div>
+            <div>Clean-room native replacements: context-reader, insert-bridge</div>
+            <div>Electron/Chromium licensing notices are included with packaged builds.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="col" style="gap:8px;">
+            <div><strong>Contact & support</strong></div>
+            <div class="muted">Support email: <span id="supportEmail">support@placeholder.local</span></div>
+            <div class="tooltip">Replace this placeholder with the real support address when available.</div>
           </div>
         </div>
       </section>
